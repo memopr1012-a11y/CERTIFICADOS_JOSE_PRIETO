@@ -1,0 +1,67 @@
+import pandas as pd
+from reportlab.pdfgen import canvas
+from reportlab.lib.pagesizes import A4
+from reportlab.lib.utils import ImageReader
+from datetime import datetime
+import os
+import re
+
+# Rutas
+ruta_excel = r"C:\Users\sala5\Desktop\t\Certificados Automáticos\datos\inscritos.xlsx"
+ruta_plantilla = r"C:\Users\sala5\Desktop\t\Certificados Automáticos\plantilla\Certificado corporativo color azul A4.png"
+carpeta_salida = r"C:\Users\sala5\Desktop\t\Certificados Automáticos\certificados"
+
+os.makedirs(carpeta_salida, exist_ok=True)
+
+# Leer Excel
+df = pd.read_excel(ruta_excel)
+
+def sanitizar_nombre(s):
+    s = str(s).strip()
+    s = re.sub(r'[\\/:"*?<>|]+', "", s)
+    s = s.replace(" ", "_")
+    return s
+
+def generar_certificado(nombre, codigo, proyecto, espacio):
+    nombre_file = sanitizar_nombre(nombre)
+    ruta_salida = os.path.join(carpeta_salida, f"Certificado_{nombre_file}.pdf")
+
+    c = canvas.Canvas(ruta_salida, pagesize=A4)
+    width, height = A4
+
+    # Fondo
+    plantilla = ImageReader(ruta_plantilla)
+    c.drawImage(plantilla, 0, 0, width=width, height=height)
+
+    # Fecha actual
+    fecha_actual = datetime.now().strftime("%d/%m/%Y")
+
+    # Texto principal
+    c.setFont("Helvetica-Bold", 26)
+    c.drawCentredString(width/2, 420, str(nombre))
+
+    c.setFont("Helvetica", 12)
+    c.drawCentredString(width/2, 385, f"Código: {codigo}")
+    c.drawCentredString(width/2, 360, f"Proyecto: {proyecto}")
+    c.drawCentredString(width/2, 335, f"Espacio académico: {espacio}")
+
+    # Fecha en la parte inferior
+    c.setFont("Helvetica-Oblique", 11)
+    c.drawCentredString(width/2, 300, f"Fecha: {fecha_actual}")
+
+    c.save()
+    print(f"✅ Certificado generado: {ruta_salida}")
+
+# Recorrer filas del Excel
+for _, fila in df.iterrows():
+    try:
+        generar_certificado(
+            nombre=fila["Nombre completo del estudiante 1"],
+            codigo=fila["Código del estudiante 1"],
+            proyecto=fila["Nombre del Proyecto"],
+            espacio=fila["Selecciona el espacio académico"]
+        )
+    except Exception as e:
+        print(f"⚠️ Error al generar certificado de {fila['Nombre completo del estudiante 1']}: {e}")
+
+print("\n🎉 Todos los certificados fueron generados correctamente en la carpeta 'certificados'.")
